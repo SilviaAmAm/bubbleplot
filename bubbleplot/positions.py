@@ -50,7 +50,7 @@ def spawn_bubbles(radii):
 
     return np.asarray(coordinates)
 
-def optimise_positions(radii, centres, return_traj=False):
+def optimise_positions(radii, centres, return_traj=False, n_steps=5000, learning_rate=0.001):
     """
     This function takes in positions and centres and moves the positions so that the bubbles are close to each other.
 
@@ -62,27 +62,20 @@ def optimise_positions(radii, centres, return_traj=False):
     :rtype: numpy array of shape (N,2)
     """
     n_bubbles = len(radii)
-    n_steps = 5000
-
-    # Give random velocities to the particles
-    # current_velocities = np.random.rand(n_bubbles, 2)
-    current_velocities = np.zeros((n_bubbles,2))
 
     # Calculate the forces acting on the particles
-    current_forces = get_vdw_forces(radii, centres)
+    current_forces = get_forces(radii, centres)
 
-    # Integrate equations of motion
+    # Optimisation
     current_positions = centres
     if return_traj:
         traj_log = [current_positions]
 
     for i in range(n_steps):
-        new_positions = update_positions(current_positions, current_velocities, current_forces, 0.01)
-        new_forces = get_vdw_forces(radii, new_positions)
-        new_velocities = update_velocities(current_velocities, current_forces, new_forces, 0.01)
+        new_positions = update_positions(current_positions, current_forces, learning_rate)
+        new_forces = get_forces(radii, new_positions)
 
         current_positions = new_positions
-        current_velocities = new_velocities
         current_forces = new_forces
 
         if return_traj:
@@ -93,12 +86,16 @@ def optimise_positions(radii, centres, return_traj=False):
     else:
         return current_positions
 
-def get_vdw_forces(radii, centres):
+def get_forces(radii, centres):
     """
-    Calculates the Van der Waals force acting on each particle. The parameters are pulled out
-    of thin air by yours truly.
+    Calculates the harmonic force acting on each particle.
 
-    :return: force
+    :param radii: Radii of the bubbles
+    :type radii: tuple of size (N,)
+    :param centres: the coordinates of the bubbles
+    :type centres: numpy array of shape (N,2)
+    :return: forces on the bubbles
+    :rtype: numpy array of shape (N,2)
     """
     n_bubbles = len(radii)
     forces = np.zeros((n_bubbles, 2))
@@ -106,33 +103,36 @@ def get_vdw_forces(radii, centres):
     for i in range(n_bubbles-1):
         for j in range(i+1, n_bubbles):
             dist_vec = (centres[j]-centres[i])/np.linalg.norm((centres[j]-centres[i]))    # unit vector from i to j
-            force_mag = get_vdw_force_magnitude(radii[i], radii[j], centres[i], centres[j])
-            forces[i] += dist_vec * force_mag
-            forces[j] += -1 * dist_vec * force_mag
+            force_mag = get_force_magnitude(radii[i], radii[j], centres[i], centres[j])
+            forces[i] += -1 * dist_vec * force_mag
+            forces[j] += dist_vec * force_mag
 
     return forces
 
-def get_vdw_force_magnitude(r1,r2, centre1, centre2):
+def get_force_magnitude(r1, r2, centre1, centre2):
     """
     Takes in the radii of 2 particles and returns the magnitude of the force acting between them.
 
     :param r1: radius of particle 1
     :param r2: radius of particle 2
     :param centre1: centre of particle 1
+    :type centre1: np array of shape (2,)
     :param centre2: centre of particle 2
+    :type centre2: np array of shape (2,)
     :return: force magnitude
     """
     dist_vec = centre2-centre1
-    dist = np.linalg.norm(dist_vec)
+    dist = np.linalg.norm(dist_vec)-r1-r2
 
     # The minimum of the potential: just over the sum of the two radii
-    a = r1 + r2 + 1
-
-    pair_force = 2*(dist-a)*dist
+    if dist < 0:
+        pair_force = 600*dist
+    else:
+        pair_force = 2*dist
 
     return pair_force
 
-def update_positions(current_positions, current_velocities, current_forces, time_step=0.001):
+def update_positions(current_positions, current_forces, time_step=0.001):
     """
     Updates the position using the velocity verlet algorithm
 
@@ -146,24 +146,5 @@ def update_positions(current_positions, current_velocities, current_forces, time
     :return: new positions
     :rtype: numpy array of shape (N, 2)
     """
-    new_positions = current_positions + current_velocities * time_step + 0.5 * current_forces * (time_step ** 2)
+    new_positions = current_positions - time_step * current_forces
     return new_positions
-
-def update_velocities(current_velocities, current_forces, new_forces, time_step=0.001):
-    """
-    Updates the velocities using the velocity verlet algorithm
-
-    :param current_positions: position of the particles
-    :type current_positions: numpy array of shape (N, 2)
-    :param current_velocities: velocity of the particles
-    :type current_velocities: numpy array of shape (N, 2)
-    :param current_forces: forces acting on the particles
-    :type current_forces: numpy array of shape (N, 2)
-    :param time_step: time step for the integrator
-    :return: new positions
-    :rtype: numpy array of shape (N, 2)
-    """
-
-    new_velocities = current_velocities + (current_forces + new_forces)*0.5*time_step
-    new_velocities = new_velocities/np.linalg.norm(new_velocities, axis=0)
-    return new_velocities
