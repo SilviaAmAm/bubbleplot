@@ -86,6 +86,27 @@ def optimise_positions(radii, centres, return_traj=False, n_steps=5000, learning
     else:
         return current_positions
 
+def foptimise_positions(radii, centres, n_steps=5000, learning_rate=0.001):
+    """
+    This function takes in positions and centres and moves the positions so that the bubbles are close to each other.
+    It uses fortran so its faster.
+
+    :param radii: Radii of the bubbles
+    :type radii: tuple of size (N,)
+    :param centres: the coordinates of the bubbles
+    :type centres: numpy array of shape (N,2)
+    :return: final coordinates of the bubbles
+    :rtype: numpy array of shape (N,2)
+    """
+
+    import foptimise
+
+    n_bubbles = len(radii)
+    radii = np.asarray(radii)
+
+    final_positions = foptimise.optimise_pos(radii, centres, n_steps, learning_rate, n_bubbles)
+    return final_positions
+
 def get_forces(radii, centres):
     """
     Calculates the harmonic force acting on each particle.
