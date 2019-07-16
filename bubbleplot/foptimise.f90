@@ -102,7 +102,7 @@ subroutine get_force_magnitude(r1, r2, c1, c2, force_mag)
     dist = sqrt(dot_product(dist_vec, dist_vec))-r1-r2
 
     if (dist < 0) then
-        force_mag = 600*dist
+        force_mag = 100000*dist
     else 
         force_mag = 2*dist
     end if

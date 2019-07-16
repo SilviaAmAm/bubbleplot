@@ -1,14 +1,10 @@
 import matplotlib.pyplot as plt
+plt.rcParams['animation.ffmpeg_path'] = '/Users/walfits/anaconda3/envs/deffi/bin/ffmpeg'
 import matplotlib.animation as animation
 from matplotlib.patches import Ellipse
 import numpy as np
 
 from bubbleplot import positions
-
-# def update(frame, scat_plot, trajectory):
-#     scat_plot.set_offsets(trajectory[frame])
-#
-#     return scat_plot,
 
 def update(frame, trajectory, circ_list, radii, ax):
 
@@ -19,24 +15,29 @@ def update(frame, trajectory, circ_list, radii, ax):
 
     return ax,
 
-
 def get_animation(radii, centres, return_traj=True, n_steps=5000, learning_rate=0.0005):
 
     new_centers, trajectory = positions.optimise_positions(radii, centres, return_traj=return_traj, n_steps=n_steps, learning_rate=learning_rate)
 
     radii = np.asarray(radii)
-    fig, ax = plt.subplots(figsize=(10,10))
+    fig, ax = plt.subplots(figsize=(7,7))
+    ax.set_axis_off()
     circ_list = []
     for i in range(len(radii)):
         circ = Ellipse((centres[i,0], centres[i,1]), width=radii[i]*2, height=radii[i]*2, alpha=0.5)
         circ_list.append(circ)
         ax.add_patch(circ)
-    ax.set_xlim((min(centres[:,0]),max(centres[:,0])))
-    ax.set_ylim((min(centres[:,0]),max(centres[:,0])))
+    # ax.set_xlim((min(centres[:,0]),max(centres[:,0])))
+    # ax.set_ylim((min(centres[:,0]),max(centres[:,0])))
+    ax.set_xlim((min(centres[:, 0]) - max(radii), max(centres[:, 0]) + max(radii)))
+    ax.set_ylim((min(centres[:, 1]) - max(radii), max(centres[:, 1]) + max(radii)))
 
-    frames = list(range(0, len(trajectory), 1))
+    frames = list(range(0, len(trajectory), 20))
     ani = animation.FuncAnimation(fig, update, frames, init_func=None, blit=False, interval=1,
                                   fargs=(trajectory, circ_list, radii, ax))
+
+    # writer = animation.FFMpegWriter(fps=30, bitrate=1800)
+    # ani.save(filename='/Users/walfits/Desktop/bubbles.mp4', writer=writer, dpi=100)
 
     plt.show()
 
@@ -44,7 +45,7 @@ if __name__ == "__main__":
     # radii = (1, 1, 1)
     # centres = np.array([[-2, 0], [2, 0], [0,2]])
 
-    radii = tuple(range(1,10))
+    radii = tuple(range(1,30))
     centres = positions.spawn_bubbles(radii)
 
     get_animation(radii, centres, return_traj=True, n_steps=5000, learning_rate=0.0005)

@@ -99,7 +99,7 @@ def foptimise_positions(radii, centres, n_steps=5000, learning_rate=0.001):
     :rtype: numpy array of shape (N,2)
     """
 
-    import foptimise
+    from bubbleplot import foptimise
 
     n_bubbles = len(radii)
     radii = np.asarray(radii)
