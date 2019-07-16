@@ -50,7 +50,7 @@ def spawn_bubbles(radii):
 
     return np.asarray(coordinates)
 
-def optimise_positions(radii, centres, return_traj=False, n_steps=5000, learning_rate=0.001):
+def optimise_positions(radii, centres, return_traj=False, n_steps=5000, learning_rate=0.001, rep_const=600):
     """
     This function takes in positions and centres and moves the positions so that the bubbles are close to each other.
 
@@ -58,13 +58,15 @@ def optimise_positions(radii, centres, return_traj=False, n_steps=5000, learning
     :type radii: tuple of size (N,)
     :param centres: the coordinates of the bubbles
     :type centres: numpy array of shape (N,2)
+    :param rep_const: the constant of the repulsive potential. The higher it is, the less the bubbles will overlap.
+    :type rep_const: int
     :return: final coordinates of the bubbles
     :rtype: numpy array of shape (N,2)
     """
     n_bubbles = len(radii)
 
     # Calculate the forces acting on the particles
-    current_forces = get_forces(radii, centres)
+    current_forces = get_forces(radii, centres, rep_const)
 
     # Optimisation
     current_positions = centres
@@ -73,7 +75,7 @@ def optimise_positions(radii, centres, return_traj=False, n_steps=5000, learning
 
     for i in range(n_steps):
         new_positions = update_positions(current_positions, current_forces, learning_rate)
-        new_forces = get_forces(radii, new_positions)
+        new_forces = get_forces(radii, new_positions, rep_const)
 
         current_positions = new_positions
         current_forces = new_forces
@@ -86,7 +88,7 @@ def optimise_positions(radii, centres, return_traj=False, n_steps=5000, learning
     else:
         return current_positions
 
-def foptimise_positions(radii, centres, n_steps=5000, learning_rate=0.001):
+def foptimise_positions(radii, centres, n_steps=5000, learning_rate=0.001, rep_const=600):
     """
     This function takes in positions and centres and moves the positions so that the bubbles are close to each other.
     It uses fortran so its faster.
@@ -95,6 +97,8 @@ def foptimise_positions(radii, centres, n_steps=5000, learning_rate=0.001):
     :type radii: tuple of size (N,)
     :param centres: the coordinates of the bubbles
     :type centres: numpy array of shape (N,2)
+    :param rep_const: the constant of the repulsive potential. The higher it is, the less the bubbles will overlap.
+    :type rep_const: int
     :return: final coordinates of the bubbles
     :rtype: numpy array of shape (N,2)
     """
@@ -104,10 +108,10 @@ def foptimise_positions(radii, centres, n_steps=5000, learning_rate=0.001):
     n_bubbles = len(radii)
     radii = np.asarray(radii)
 
-    final_positions = foptimise.optimise_pos(radii, centres, n_steps, learning_rate, n_bubbles)
+    final_positions = foptimise.optimise_pos(radii, centres, n_steps, learning_rate, rep_const, n_bubbles)
     return final_positions
 
-def get_forces(radii, centres):
+def get_forces(radii, centres, rep_const):
     """
     Calculates the harmonic force acting on each particle.
 
@@ -115,6 +119,8 @@ def get_forces(radii, centres):
     :type radii: tuple of size (N,)
     :param centres: the coordinates of the bubbles
     :type centres: numpy array of shape (N,2)
+    :param rep_const: the constant of the repulsive potential. The higher it is, the less the bubbles will overlap.
+    :type rep_const: int
     :return: forces on the bubbles
     :rtype: numpy array of shape (N,2)
     """
@@ -124,13 +130,13 @@ def get_forces(radii, centres):
     for i in range(n_bubbles-1):
         for j in range(i+1, n_bubbles):
             dist_vec = (centres[j]-centres[i])/np.linalg.norm((centres[j]-centres[i]))    # unit vector from i to j
-            force_mag = get_force_magnitude(radii[i], radii[j], centres[i], centres[j])
+            force_mag = get_force_magnitude(radii[i], radii[j], centres[i], centres[j], rep_const)
             forces[i] += -1 * dist_vec * force_mag
             forces[j] += dist_vec * force_mag
 
     return forces
 
-def get_force_magnitude(r1, r2, centre1, centre2):
+def get_force_magnitude(r1, r2, centre1, centre2, rep_const):
     """
     Takes in the radii of 2 particles and returns the magnitude of the force acting between them.
 
@@ -140,6 +146,8 @@ def get_force_magnitude(r1, r2, centre1, centre2):
     :type centre1: np array of shape (2,)
     :param centre2: centre of particle 2
     :type centre2: np array of shape (2,)
+    :param rep_const: the constant of the repulsive potential. The higher it is, the less the bubbles will overlap.
+    :type rep_const: int
     :return: force magnitude
     """
     dist_vec = centre2-centre1
@@ -147,7 +155,7 @@ def get_force_magnitude(r1, r2, centre1, centre2):
 
     # The minimum of the potential: just over the sum of the two radii
     if dist < 0:
-        pair_force = 600*dist
+        pair_force = rep_const*dist
     else:
         pair_force = 2*dist
 

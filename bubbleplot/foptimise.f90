@@ -4,7 +4,7 @@
 !    integer, parameter :: sp = selected_real_kind(p=8)
 !    real(sp), dimension(2) :: radii
 !    real(sp), dimension(2, 2) :: initial_centres, final_centres
-!    integer :: n_steps, n_bubbles, i, j
+!    integer :: n_steps, n_bubbles, i, j, rep_const
 !    real(sp) :: learning_rate
 !
 !    radii = (/1, 1 /)
@@ -14,9 +14,10 @@
 !    initial_centres(2,2) = 0
 !    n_steps = 1000
 !    n_bubbles = 2
+!    rep_const = 600
 !    learning_rate = 0.01
 !
-!    call optimise_pos(n_bubbles, radii, initial_centres, n_steps, learning_rate, final_centres)
+!    call optimise_pos(n_bubbles, radii, initial_centres, n_steps, learning_rate, rep_const, final_centres)
 !
 !    do i =1,n_bubbles
 !        do j = 1, 2
@@ -26,12 +27,12 @@
 !
 !end program optimise_fortran
 
-subroutine optimise_pos(n_bubbles, radii, centres_in, n_steps, learning_rate, centres_out)  
+subroutine optimise_pos(n_bubbles, radii, centres_in, n_steps, learning_rate, rep_const, centres_out)
 
     implicit none
 
     integer, parameter :: sp = selected_real_kind(p=8)
-    integer, intent(in) :: n_steps, n_bubbles
+    integer, intent(in) :: n_steps, n_bubbles, rep_const
     real(sp), dimension(n_bubbles), intent(in) :: radii
     real(sp), dimension(n_bubbles, 2), intent(in) :: centres_in
     real(sp), dimension(n_bubbles, 2), intent(out) :: centres_out
@@ -40,24 +41,24 @@ subroutine optimise_pos(n_bubbles, radii, centres_in, n_steps, learning_rate, ce
     real(sp), dimension(n_bubbles, 2) :: forces
     integer :: i
 
-    call get_forces(n_bubbles, radii, centres_in, forces)
+    call get_forces(n_bubbles, radii, centres_in, rep_const, forces)
 
     ! Start optimisation
     centres_out = centres_in
 
     do i = 1, n_steps
         call update_positions(n_bubbles, centres_out, forces, learning_rate)
-        call get_forces(n_bubbles, radii, centres_out, forces)
+        call get_forces(n_bubbles, radii, centres_out, rep_const, forces)
     end do
 
 end subroutine optimise_pos
 
 
-subroutine get_forces(n_bubbles, radii, centres_in, forces)
+subroutine get_forces(n_bubbles, radii, centres_in, rep_const, forces)
     implicit none
 
     integer, parameter :: sp = selected_real_kind(p=8)
-    integer, intent(in) :: n_bubbles
+    integer, intent(in) :: n_bubbles, rep_const
     real(sp), dimension(n_bubbles), intent(in) :: radii
     real(sp), dimension(n_bubbles, 2), intent(in) :: centres_in
     real(sp), dimension(n_bubbles, 2), intent(out) :: forces
@@ -77,7 +78,7 @@ subroutine get_forces(n_bubbles, radii, centres_in, forces)
             norm = sqrt(dot_product(dist_vec, dist_vec))
 
             dist_vec = dist_vec/norm
-            call get_force_magnitude(radii(i), radii(j), centres_in(i,:),  centres_in(j,:), force_mag)
+            call get_force_magnitude(radii(i), radii(j), centres_in(i,:),  centres_in(j,:), rep_const, force_mag)
 
             forces(i,:) = forces(i,:) - dist_vec * force_mag
             forces(j,:) = forces(j,:) + dist_vec * force_mag
@@ -87,13 +88,14 @@ subroutine get_forces(n_bubbles, radii, centres_in, forces)
 
 end subroutine get_forces
 
-subroutine get_force_magnitude(r1, r2, c1, c2, force_mag)
+subroutine get_force_magnitude(r1, r2, c1, c2, rep_const, force_mag)
     implicit none
 
     integer, parameter :: sp = selected_real_kind(p=8)
     real(sp), intent(in) :: r1, r2
     real(sp), dimension(2), intent(in) :: c1, c2
     real(sp), intent(out) :: force_mag
+    integer, intent(in) :: rep_const
 
     real(sp), dimension(2) :: dist_vec
     real(sp) :: dist
@@ -102,7 +104,7 @@ subroutine get_force_magnitude(r1, r2, c1, c2, force_mag)
     dist = sqrt(dot_product(dist_vec, dist_vec))-r1-r2
 
     if (dist < 0) then
-        force_mag = 100000*dist
+        force_mag = rep_const*dist
     else 
         force_mag = 2*dist
     end if
