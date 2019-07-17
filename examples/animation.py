@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-plt.rcParams['animation.ffmpeg_path'] = '/Users/walfits/anaconda3/envs/deffi/bin/ffmpeg'
 import matplotlib.animation as animation
 from matplotlib.patches import Ellipse
 import numpy as np
@@ -15,9 +14,10 @@ def update(frame, trajectory, circ_list, radii, ax):
 
     return ax,
 
-def get_animation(radii, centres, return_traj=True, n_steps=5000, learning_rate=0.0005):
+def get_animation(radii, centres, return_traj=True, n_steps=5000, learning_rate=0.0005, rep_const=600):
 
-    new_centers, trajectory = positions.optimise_positions(radii, centres, return_traj=return_traj, n_steps=n_steps, learning_rate=learning_rate)
+    new_centers, trajectory = positions.optimise_positions(radii, centres, return_traj=return_traj, n_steps=n_steps,
+                                                           learning_rate=learning_rate, rep_const=rep_const)
 
     radii = np.asarray(radii)
     fig, ax = plt.subplots(figsize=(7,7))
@@ -36,16 +36,16 @@ def get_animation(radii, centres, return_traj=True, n_steps=5000, learning_rate=
     ani = animation.FuncAnimation(fig, update, frames, init_func=None, blit=False, interval=1,
                                   fargs=(trajectory, circ_list, radii, ax))
 
+    ## To save the animation uncomment this bit. If it doesnt work, you may need to add the path to the ffmpeg binary
+    ## plt.rcParams['animation.ffmpeg_path'] = '/path/to/bin/ffmpeg'
     # writer = animation.FFMpegWriter(fps=30, bitrate=1800)
     # ani.save(filename='/Users/walfits/Desktop/bubbles.mp4', writer=writer, dpi=100)
 
     plt.show()
 
 if __name__ == "__main__":
-    # radii = (1, 1, 1)
-    # centres = np.array([[-2, 0], [2, 0], [0,2]])
 
     radii = tuple(range(1,30))
     centres = positions.spawn_bubbles(radii)
 
-    get_animation(radii, centres, return_traj=True, n_steps=5000, learning_rate=0.0005)
+    get_animation(radii, centres, return_traj=True, n_steps=7000, learning_rate=0.000005, rep_const=2000)

@@ -11,7 +11,7 @@ from bubbleplot import positions
 # Obtain the positions of the new centres
 radii = tuple(range(1,30))
 centres = positions.spawn_bubbles(radii)
-new_centres = positions.foptimise_positions(radii, centres, n_steps=5000, learning_rate=0.0005)
+new_centres = positions.foptimise_positions(radii, centres, n_steps=10000, learning_rate=0.00001, rep_const=2000)
 
 # Plot the bubble chart
 fig, ax = plt.subplots(figsize=(7,7))
