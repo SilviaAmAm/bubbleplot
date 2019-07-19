@@ -39,7 +39,7 @@ def get_animation(radii, centres, return_traj=True, n_steps=5000, learning_rate=
     ## To save the animation uncomment this bit. If it doesnt work, you may need to add the path to the ffmpeg binary
     ## plt.rcParams['animation.ffmpeg_path'] = '/path/to/bin/ffmpeg'
     # writer = animation.FFMpegWriter(fps=30, bitrate=1800)
-    # ani.save(filename='/Users/walfits/Desktop/bubbles.mp4', writer=writer, dpi=100)
+    # ani.save(filename='bubbles.mp4', writer=writer, dpi=100)
 
     plt.show()
 
